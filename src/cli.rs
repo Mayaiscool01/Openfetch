@@ -6,7 +6,7 @@ use clap::Parser;
 #[command(
     name = "openfetch",
     version,
-    about = "A fast, customisable system information and visualisation tool for Linux",
+    about = "A fast, customisable system information and visualisation tool for Linux and macOS",
     after_help = "Configuration: ~/.config/openfetch/config.toml (see `openfetch --init-config`)"
 )]
 pub struct Cli {

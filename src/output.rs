@@ -288,7 +288,11 @@ fn module_rows(ctx: &Ctx, kind: ModuleKind, rows: &mut Vec<Row>) {
         }
         Kernel => {
             if let Some(k) = &info.kernel {
-                kv(rows, ctx.label(kind, "Kernel"), t(format!("Linux {k}")));
+                kv(
+                    rows,
+                    ctx.label(kind, "Kernel"),
+                    t(format!("{} {k}", crate::os::KERNEL_NAME)),
+                );
             }
         }
         Uptime => {

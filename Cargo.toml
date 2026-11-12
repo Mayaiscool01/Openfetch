@@ -1,9 +1,9 @@
 [package]
 name = "openfetch"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 rust-version = "1.75"
-description = "A fast, customisable system information and visualisation tool for Linux"
+description = "A fast, customisable system information and visualisation tool for Linux and macOS"
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/Mayaiscool01/Openfetch"

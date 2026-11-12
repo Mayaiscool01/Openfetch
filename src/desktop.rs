@@ -160,6 +160,13 @@ pub fn detect_wm(get: Env, de: Option<&str>) -> Option<String> {
 }
 
 pub fn detect(get: Env) -> DesktopInfo {
+    if cfg!(target_os = "macos") {
+        return DesktopInfo {
+            de: Some("Aqua".to_string()),
+            wm: Some("Quartz Compositor".to_string()),
+            session_type: None,
+        };
+    }
     let de = detect_de(get);
     let wm = detect_wm(get, de.as_deref());
     let session_type = nonempty(get, "XDG_SESSION_TYPE").map(|t| match t.as_str() {
@@ -194,6 +201,9 @@ fn connector_name(dir: &str) -> Option<&str> {
 
 /// Resolution of connected displays, from DRM `modes` (first = preferred mode).
 pub fn displays() -> Vec<Display> {
+    if cfg!(target_os = "macos") {
+        return crate::macos::displays();
+    }
     let mut out = Vec::new();
     if let Ok(dir) = fs::read_dir("/sys/class/drm") {
         let mut entries: Vec<_> = dir.filter_map(Result::ok).collect();
@@ -364,6 +374,9 @@ fn gsettings(key: &str) -> Option<String> {
 }
 
 pub fn detect_appearance(home: &std::path::Path, de: Option<&str>) -> Appearance {
+    if cfg!(target_os = "macos") {
+        return crate::macos::appearance();
+    }
     let read = |rel: &str| fs::read_to_string(home.join(rel)).ok();
     let mut a = Appearance::default();
     let de = de.unwrap_or("");

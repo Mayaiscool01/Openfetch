@@ -275,6 +275,9 @@ fn device_tree_board() -> Option<String> {
 }
 
 pub fn host_model() -> Option<String> {
+    if cfg!(target_os = "macos") {
+        return crate::macos::host_model();
+    }
     let name = dmi("product_name");
     let version = dmi("product_version");
     let vendor = dmi("sys_vendor").unwrap_or_default();
@@ -294,6 +297,9 @@ pub fn host_model() -> Option<String> {
 }
 
 pub fn motherboard() -> Option<String> {
+    if cfg!(target_os = "macos") {
+        return None; // Macs have no separately named board
+    }
     match (dmi("board_vendor"), dmi("board_name")) {
         (Some(v), Some(n)) => Some(format!("{v} {n}")),
         (None, Some(n)) => Some(n),
@@ -302,6 +308,9 @@ pub fn motherboard() -> Option<String> {
 }
 
 pub fn firmware() -> Option<Firmware> {
+    if cfg!(target_os = "macos") {
+        return crate::macos::firmware();
+    }
     let efi = Path::new("/sys/firmware/efi").exists();
     let vendor = dmi("bios_vendor");
     let version = dmi("bios_version");
@@ -340,6 +349,9 @@ pub fn estimate_minutes(status: &str, now: f64, full: f64, rate: f64) -> Option<
 }
 
 pub fn batteries() -> Vec<BatteryInfo> {
+    if cfg!(target_os = "macos") {
+        return crate::macos::batteries();
+    }
     let Ok(dir) = fs::read_dir("/sys/class/power_supply") else {
         return Vec::new();
     };

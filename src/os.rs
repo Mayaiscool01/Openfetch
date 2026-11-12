@@ -87,6 +87,9 @@ pub fn parse_os_release(text: &str) -> OsRelease {
 }
 
 pub fn detect_os() -> OsRelease {
+    if cfg!(target_os = "macos") {
+        return crate::macos::os_release();
+    }
     for p in ["/etc/os-release", "/usr/lib/os-release"] {
         if let Ok(text) = fs::read_to_string(p) {
             return parse_os_release(&text);
@@ -102,11 +105,26 @@ fn read_trim(path: impl AsRef<Path>) -> Option<String> {
         .filter(|s| !s.is_empty())
 }
 
+/// Kernel name shown before its version.
+pub const KERNEL_NAME: &str = if cfg!(target_os = "macos") {
+    "Darwin"
+} else {
+    "Linux"
+};
+
 pub fn kernel() -> Option<String> {
+    if cfg!(target_os = "macos") {
+        return sysinfo::System::kernel_version();
+    }
     read_trim("/proc/sys/kernel/osrelease")
 }
 
 pub fn hostname() -> Option<String> {
+    if cfg!(target_os = "macos") {
+        return sysinfo::System::host_name()
+            .map(|h| h.trim_end_matches(".local").to_string())
+            .filter(|h| !h.is_empty());
+    }
     read_trim("/proc/sys/kernel/hostname")
         .or_else(|| read_trim("/etc/hostname"))
         .or_else(|| env::var("HOSTNAME").ok().filter(|h| !h.is_empty()))
@@ -120,6 +138,9 @@ pub fn username() -> Option<String> {
 }
 
 pub fn uptime_seconds() -> Option<u64> {
+    if cfg!(target_os = "macos") {
+        return Some(sysinfo::System::uptime());
+    }
     let text = fs::read_to_string("/proc/uptime").ok()?;
     let secs: f64 = text.split_whitespace().next()?.parse().ok()?;
     Some(secs as u64)
@@ -166,6 +187,10 @@ pub fn shell_with_version() -> Option<String> {
 
 /// 1, 5 and 15 minute load averages.
 pub fn load_average() -> Option<[f32; 3]> {
+    if cfg!(target_os = "macos") {
+        let l = sysinfo::System::load_average();
+        return Some([l.one as f32, l.five as f32, l.fifteen as f32]);
+    }
     parse_loadavg(&fs::read_to_string("/proc/loadavg").ok()?)
 }
 
@@ -176,6 +201,9 @@ pub fn parse_loadavg(text: &str) -> Option<[f32; 3]> {
 
 /// Number of running processes.
 pub fn process_count() -> Option<usize> {
+    if cfg!(target_os = "macos") {
+        return crate::macos::process_count();
+    }
     let n = fs::read_dir("/proc")
         .ok()?
         .filter_map(Result::ok)
@@ -190,6 +218,9 @@ pub fn process_count() -> Option<usize> {
 
 /// Name of PID 1 (`systemd`, `openrc-init`, `runit`, ...).
 pub fn init_system() -> Option<String> {
+    if cfg!(target_os = "macos") {
+        return Some("launchd".to_string());
+    }
     read_trim("/proc/1/comm")
 }
 
@@ -354,6 +385,9 @@ fn command_lines(cmd: &str, args: &[&str]) -> Option<Vec<String>> {
 }
 
 pub fn packages() -> Vec<PackageCount> {
+    if cfg!(target_os = "macos") {
+        return crate::macos::packages();
+    }
     let mut out = Vec::new();
     let mut add = |manager: &str, count: usize| {
         if count > 0 {

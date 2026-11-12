@@ -84,7 +84,7 @@ compact_modules = [
 [labels]
 
 [logo]
-# auto, or one of: arch, debian, fedora, linux, opensuse, ubuntu
+# auto, or one of: arch, debian, fedora, linux, macos, opensuse, ubuntu
 name = "auto"
 # auto = solid block art on Unicode terminals, ASCII art otherwise.
 # block | ascii force a style.

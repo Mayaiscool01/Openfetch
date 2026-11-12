@@ -147,7 +147,9 @@ fn logo_only_and_named_logos() {
 #[test]
 fn lists() {
     let logos = stdout(&run(&["--list-logos"]));
-    for id in ["fedora", "arch", "debian", "ubuntu", "opensuse", "linux"] {
+    for id in [
+        "fedora", "arch", "debian", "ubuntu", "opensuse", "macos", "linux",
+    ] {
         assert!(logos.contains(id));
     }
     assert!(stdout(&run(&["--list-themes"])).contains("nord"));

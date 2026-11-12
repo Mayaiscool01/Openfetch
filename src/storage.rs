@@ -45,6 +45,12 @@ pub fn is_real_fs(fs: &str) -> bool {
     )
 }
 
+/// On macOS only the startup volume and mounted volumes are interesting;
+/// the many internal APFS volumes under `/System/Volumes` are not.
+pub fn is_user_volume(mount: &str) -> bool {
+    mount == "/" || mount.starts_with("/Volumes/")
+}
+
 /// Keep one entry per device (btrfs subvolumes and bind mounts repeat),
 /// preferring the shortest mount path. Result is ordered by mount point.
 pub fn dedupe(mut disks: Vec<DiskInfo>) -> Vec<DiskInfo> {
@@ -80,6 +86,7 @@ pub fn detect(hide_mounts: &[String]) -> Vec<DiskInfo> {
             if total == 0
                 || !is_real_fs(&fs)
                 || device.starts_with("/dev/loop")
+                || (cfg!(target_os = "macos") && !is_user_volume(&mount))
                 || hide_mounts.iter().any(|h| h == &mount)
                 || [
                     "/snap",
@@ -136,6 +143,14 @@ mod tests {
         ] {
             assert!(!is_real_fs(bad), "{bad}");
         }
+    }
+
+    #[test]
+    fn macos_volume_filter() {
+        assert!(is_user_volume("/"));
+        assert!(is_user_volume("/Volumes/Backup"));
+        assert!(!is_user_volume("/System/Volumes/Data"));
+        assert!(!is_user_volume("/System/Volumes/VM"));
     }
 
     #[test]

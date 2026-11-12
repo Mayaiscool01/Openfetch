@@ -6,6 +6,7 @@ mod cpu;
 mod desktop;
 mod gpu;
 mod logo;
+mod macos;
 mod memory;
 mod network;
 mod os;

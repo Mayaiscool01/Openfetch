@@ -111,6 +111,9 @@ fn is_card_dir(name: &str) -> bool {
 }
 
 pub fn detect() -> Vec<GpuInfo> {
+    if cfg!(target_os = "macos") {
+        return crate::macos::gpus();
+    }
     let pci_ids = PCI_IDS.iter().find_map(|p| fs::read_to_string(p).ok());
     let mut gpus: Vec<GpuInfo> = Vec::new();
     let Ok(entries) = fs::read_dir("/sys/class/drm") else {

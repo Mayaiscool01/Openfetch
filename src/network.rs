@@ -25,8 +25,11 @@ pub struct NetworkInfo {
 /// Container/VM plumbing interfaces that just add noise.
 pub fn is_virtual(name: &str) -> bool {
     name == "lo"
+        || name == "lo0"
         || [
             "veth", "docker", "br-", "virbr", "vnet", "cni", "flannel", "podman",
+            // macOS tunnels and internal links
+            "utun", "awdl", "llw", "gif", "stf", "anpi", "ap1", "bridge",
         ]
         .iter()
         .any(|p| name.starts_with(p))
@@ -55,7 +58,8 @@ pub fn detect() -> NetworkInfo {
         .map(|(name, data)| {
             let state =
                 fs::read_to_string(format!("/sys/class/net/{name}/operstate")).unwrap_or_default();
-            let up = matches!(state.trim(), "up" | "unknown");
+            // Without sysfs (macOS) an interface counts as up when it has an address.
+            let linux_up = matches!(state.trim(), "up" | "unknown");
             let mut v4 = Vec::new();
             let mut v6 = Vec::new();
             for net in data.ip_networks() {
@@ -70,7 +74,11 @@ pub fn detect() -> NetworkInfo {
             let mac = data.mac_address().to_string();
             Interface {
                 name: name.clone(),
-                up,
+                up: if cfg!(target_os = "linux") {
+                    linux_up
+                } else {
+                    !v4.is_empty()
+                },
                 mac: (mac != "00:00:00:00:00:00").then_some(mac),
                 addresses: v4,
             }
@@ -78,9 +86,14 @@ pub fn detect() -> NetworkInfo {
         .collect();
     interfaces.sort_by(|a, b| a.name.cmp(&b.name));
 
-    let primary = fs::read_to_string("/proc/net/route")
-        .ok()
-        .and_then(|r| default_route_interface(&r))
+    let default_route = if cfg!(target_os = "macos") {
+        crate::macos::default_interface()
+    } else {
+        fs::read_to_string("/proc/net/route")
+            .ok()
+            .and_then(|r| default_route_interface(&r))
+    };
+    let primary = default_route
         .filter(|p| interfaces.iter().any(|i| &i.name == p))
         .or_else(|| {
             interfaces
@@ -115,10 +128,20 @@ mod tests {
 
     #[test]
     fn hides_virtual_interfaces() {
-        for v in ["lo", "veth1234", "docker0", "br-abc", "virbr0"] {
+        for v in [
+            "lo", "lo0", "veth1234", "docker0", "br-abc", "virbr0", "utun3", "awdl0",
+        ] {
             assert!(is_virtual(v), "{v}");
         }
-        for r in ["eth0", "wlan0", "enp3s0", "wlp2s0", "tailscale0"] {
+        for r in [
+            "eth0",
+            "wlan0",
+            "enp3s0",
+            "wlp2s0",
+            "tailscale0",
+            "en0",
+            "en1",
+        ] {
             assert!(!is_virtual(r), "{r}");
         }
     }
@@ -133,6 +156,9 @@ mod tests {
     #[test]
     fn detect_does_not_panic() {
         let n = detect();
-        assert!(n.interfaces.iter().all(|i| i.name != "lo"));
+        assert!(n
+            .interfaces
+            .iter()
+            .all(|i| i.name != "lo" && i.name != "lo0"));
     }
 }
