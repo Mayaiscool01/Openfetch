@@ -4,9 +4,15 @@
 
 # OpenFetch
 
-A fast, customisable system information tool for Linux, written in Rust.
+A fast, customisable system info tool for Linux, written in Rust. Block-art
+distro logos, themes, a live dashboard, animated and image logos.
+
 Think Fastfetch, with more modules, themes you can write yourself, a documented
-TOML config, JSON output, and optional animated logos.
+TOML config and JSON output.
+
+> **Early release.** OpenFetch has only been run on a handful of machines so
+> far. If something is missing or wrong on your hardware, please open an
+> issue with the output of `openfetch --json --noip`.
 
 ```
                     ██                      ╭─ Software ──────────────────────────────────────╮
