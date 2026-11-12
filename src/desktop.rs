@@ -374,9 +374,6 @@ fn gsettings(key: &str) -> Option<String> {
 }
 
 pub fn detect_appearance(home: &std::path::Path, de: Option<&str>) -> Appearance {
-    if cfg!(target_os = "macos") {
-        return crate::macos::appearance();
-    }
     let read = |rel: &str| fs::read_to_string(home.join(rel)).ok();
     let mut a = Appearance::default();
     let de = de.unwrap_or("");

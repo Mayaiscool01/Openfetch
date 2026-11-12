@@ -466,7 +466,11 @@ pub fn collect(wanted: &HashSet<ModuleKind>, opts: &CollectOptions) -> SystemInf
     if w(Theme) || w(Icons) || w(Cursor) || w(Font) {
         let home = std::path::PathBuf::from(env("HOME").unwrap_or_default());
         let de = info.desktop.as_ref().and_then(|d| d.de.clone());
-        info.appearance = Some(desktop::detect_appearance(&home, de.as_deref()));
+        info.appearance = Some(if cfg!(target_os = "macos") {
+            crate::macos::appearance()
+        } else {
+            desktop::detect_appearance(&home, de.as_deref())
+        });
     }
     if w(Load) {
         info.load_average = os::load_average();

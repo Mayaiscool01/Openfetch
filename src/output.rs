@@ -1102,7 +1102,10 @@ mod tests {
         assert_eq!(lines[0], "mia@asahi");
         assert_eq!(lines[1], "─────────");
         assert_eq!(lines[2], "OS:     Fedora Linux 41 (Asahi Remix) aarch64");
-        assert_eq!(lines[3], "Kernel: Linux 6.11.0");
+        assert_eq!(
+            lines[3],
+            format!("Kernel: {} 6.11.0", crate::os::KERNEL_NAME)
+        );
         assert_eq!(lines[4], "Uptime: 1 day, 2 hours, 3 mins");
         assert!(
             lines[5].starts_with("Memory: 4.00 GiB / 16.00 GiB (25%) ███"),
@@ -1322,7 +1325,7 @@ mod tests {
             "{}",
             lines[1]
         );
-        assert!(lines[2].starts_with("│ → Linux 6.11.0"));
+        assert!(lines[2].starts_with(&format!("│ → {} 6.11.0", crate::os::KERNEL_NAME)));
         assert!(
             lines[3].trim_matches(|c| c == '│' || c == ' ').is_empty(),
             "blank row inside a box"
@@ -1353,7 +1356,11 @@ mod tests {
         let lines = text(&build_panels(&ctx, &[sec], None));
         assert!(lines.iter().all(|l| l.is_ascii()), "{lines:?}");
         assert!(lines[0].starts_with("+- box -"));
-        assert!(lines[1].starts_with("| -> Kernel: Linux"), "{}", lines[1]);
+        assert!(
+            lines[1].starts_with(&format!("| -> Kernel: {}", crate::os::KERNEL_NAME)),
+            "{}",
+            lines[1]
+        );
         assert!(lines[2].starts_with("| -> Uptime: 1 day"), "{}", lines[2]);
     }
 
@@ -1379,6 +1386,6 @@ mod tests {
         sec.bullet = Some("*".into());
         let lines = text(&build_panels(&ctx, &[sec], None));
         assert!(lines[0].contains("My Machine"));
-        assert!(lines[1].starts_with("│ * Linux"));
+        assert!(lines[1].starts_with(&format!("│ * {}", crate::os::KERNEL_NAME)));
     }
 }

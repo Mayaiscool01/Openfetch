@@ -92,13 +92,18 @@ fn section_titles_and_modules_are_configurable() {
     );
     let out = stdout(&run(&["--config", &cfg]));
     assert!(out.contains("╭─ My Box ─"), "{out}");
-    assert!(out.contains("│ * Linux"), "{out}");
+    let kernel = if cfg!(target_os = "macos") {
+        "Darwin"
+    } else {
+        "Linux"
+    };
+    assert!(out.contains(&format!("│ * {kernel}")), "{out}");
     assert!(out.contains("╭─ Other ─"));
     assert!(
         out.contains("Note:") && out.contains("hello"),
         "labels = true on one section only: {out}"
     );
-    assert!(out.contains("→ Kernel: Linux"), "{out}");
+    assert!(out.contains(&format!("→ Kernel: {kernel}")), "{out}");
     assert!(!out.contains("Software"));
 }
 
