@@ -1,0 +1,48 @@
+[package]
+name = "openfetch"
+version = "0.4.0"
+edition = "2021"
+rust-version = "1.75"
+description = "A fast, customisable system information and visualisation tool for Linux"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/Mayaiscool01/Openfetch"
+keywords = ["system-information", "fetch", "tui", "linux", "neofetch"]
+categories = ["command-line-utilities"]
+exclude = [".github/", "scripts/", "packaging/", "assets/"]
+
+[dependencies]
+clap = { version = "4.4", features = ["derive"] }
+crossterm = "0.27"
+owo-colors = "4"
+ratatui = { version = "0.26", default-features = false, features = ["crossterm"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sysinfo = { version = "0.31", default-features = false, features = ["system", "disk", "network"] }
+toml = "0.8"
+image = { version = "0.24", default-features = false, features = ["png", "jpeg", "gif"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+
+# `cargo install cargo-deb && cargo deb`
+[package.metadata.deb]
+section = "utils"
+priority = "optional"
+assets = [
+    ["target/release/openfetch", "usr/bin/", "755"],
+    ["src/default_config.toml", "usr/share/openfetch/config.toml", "644"],
+    ["LICENSE", "usr/share/doc/openfetch/copyright", "644"],
+]
+
+# `cargo install cargo-generate-rpm && cargo build --release && cargo generate-rpm`
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/release/openfetch", dest = "/usr/bin/openfetch", mode = "755" },
+    { source = "src/default_config.toml", dest = "/usr/share/openfetch/config.toml", mode = "644" },
+    { source = "LICENSE", dest = "/usr/share/licenses/openfetch/LICENSE", mode = "644", doc = true },
+]

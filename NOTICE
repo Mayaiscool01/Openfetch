@@ -1,0 +1,30 @@
+OpenFetch
+=========
+
+Third-party material
+--------------------
+
+The large Ubuntu ASCII logo in src/logo.rs is adapted from neofetch
+(https://github.com/dylanaraps/neofetch), which is distributed under the MIT
+License:
+
+    The MIT License (MIT)
+    Copyright (c) 2015-2021 Dylan Araps
+
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+
+Trademarks
+----------
+
+Distribution names and logos (Arch Linux, Debian, Fedora, openSUSE, Ubuntu,
+Tux and others) are trademarks of their respective owners. They are shown only
+to identify the system OpenFetch is running on. OpenFetch is not affiliated
+with or endorsed by any of these projects.

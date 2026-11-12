@@ -1,0 +1,143 @@
+# OpenFetch configuration  ->  ~/.config/openfetch/config.toml
+#
+# Every setting is optional; delete anything you do not want to change.
+# Run `openfetch --config` to see the configuration that is actually in effect.
+
+# Used by the flat layout (layout.frame = "flat") and ignored by panels.
+# Available modules: title, rule, break, colors, os, host, kernel, uptime,
+#   packages, shell, terminal, de, wm, resolution, motherboard, bios, cpu,
+#   cpu_usage, cpu_temp, gpu, memory, swap, disk, battery, network, localip,
+#   theme, icons, cursor, font, load, processes, init, locale
+# Custom text rows are also possible: { label = "Motto", text = "hello" }
+modules = [
+  "title", "rule", "os", "host", "kernel", "uptime", "packages", "shell",
+  "terminal", "de", "wm", "resolution", "motherboard", "bios", "cpu",
+  "cpu_usage", "cpu_temp", "gpu", "memory", "swap", "disk", "battery",
+  "network", "localip", "break", "colors",
+]
+
+# Panels: one titled box per [[sections]] entry, in this order. Edit the
+# titles, reorder, add or remove modules, or add more sections freely.
+# "break" inserts a blank line inside a box.
+# Optional per-section overrides: bullet = "*", labels = true
+[[sections]]
+title = "Software"
+modules = [
+  "os", "kernel", "uptime", "packages", "shell", "init", "break", "de", "wm",
+  "theme", "icons", "cursor", "font", "terminal",
+]
+
+[[sections]]
+title = "Hardware"
+modules = [
+  "host", "motherboard", "bios", "cpu", "cpu_usage", "cpu_temp", "gpu",
+  "memory", "swap", "disk", "battery", "break", "resolution", "network",
+  "localip", "load", "processes",
+]
+
+[general]
+# default, ocean, sunset, forest, nord, dracula, mono, or a [themes.<name>] below
+theme = "default"
+# auto | always | never   (never = plain ASCII, no box/bar characters)
+unicode = "auto"
+# auto | always | never   (auto = only on a terminal and when NO_COLOR is unset)
+color = "auto"
+# Sampling CPU usage costs ~200 ms. Set to false for the fastest startup.
+cpu_usage = true
+# Never show IP addresses (network and localip rows, and the JSON output).
+# `openfetch --noip` does the same for one run; handy before sharing a
+# screenshot or recording.
+hide_ip = false
+# Mount points never listed by the disk module.
+hide_mounts = ["/boot/efi", "/efi"]
+
+[layout]
+# detailed | compact   (same as --compact; compact always uses the flat layout)
+style = "detailed"
+# panels = titled boxes from [[sections]];  flat = one list from `modules`
+frame = "panels"
+# Bullet in front of each panel row (ASCII "->" is used without Unicode).
+bullet = "→"
+# Show "Label:" in front of values. Off = just the values, like fastfetch's
+# keyless style; short hints ("up", "CPU", "(swap)") keep rows readable.
+show_labels = false
+# left | right | none
+logo_position = "left"
+gap = 3
+margin = 1
+# Text between a label and its value (flat layout or show_labels = true).
+separator = ":"
+# Character repeated under the user@host title in the flat layout ("" disables).
+rule = "─"
+# Align all values in one column (labels shown).
+key_align = true
+# Usage bars for memory, swap, disk and CPU usage.
+bars = false
+bar_width = 12
+# Modules used by the compact layout (uses a small logo).
+compact_modules = [
+  "title", "os", "kernel", "uptime", "shell", "de", "cpu", "memory", "disk",
+  "localip", "battery",
+]
+
+# Rename labels, e.g.  os = "Distro"
+[labels]
+
+[logo]
+# auto, or one of: arch, debian, fedora, linux, opensuse, ubuntu
+name = "auto"
+# auto = solid block art on Unicode terminals, ASCII art otherwise.
+# block | ascii force a style.
+style = "auto"
+# Use your own picture or GIF as the logo (PNG, JPEG or GIF; drawn with
+# half-block characters, so a truecolor terminal looks best). Transparent
+# areas stay empty. `openfetch --image PATH` does the same for one run.
+# image = "~/Pictures/logo.png"
+image_width = 36
+# Custom logo from a text file or inline lines. Colour markers: $1..$9 select
+# a palette colour for the text that follows; $$ is a literal dollar sign.
+# file = "~/.config/openfetch/logo.txt"
+# lines = ["$1  /\\", "$1 /  \\", "$2/____\\"]
+# Palette used for the $1..$9 markers (overrides distro and theme colours).
+# colors = ["#ff5f6d", "#ffc371"]
+
+[animation]
+# Animation is off by default. `openfetch --animation` turns it on for one run.
+enabled = false
+# auto | rainbow | wave | pulse | spin | custom
+# auto = GIF frames if the logo is an animated GIF, custom frames if
+# file/frames below are set, otherwise rainbow.
+effect = "auto"
+fps = 15
+speed = 1.0
+# Seconds to run; 0 = until a key is pressed.
+duration = 0.0
+# Frame-based custom animation (effect = "custom"): a text file whose frames
+# are separated by a line containing only %%
+# file = "~/.config/openfetch/animation.txt"
+# frames = ["frame one", "frame two"]
+
+# Live full-screen dashboard: `openfetch --tui`
+# Keys: q quit, t next theme, s start/stop the logo effect, p pause updates.
+[tui]
+interval_ms = 1000
+# spin | rainbow | wave | pulse | custom | none
+# (an animated GIF logo always plays its own frames unless this is "none")
+effect = "spin"
+history = 60
+
+# Custom themes. Every colour is optional; missing ones come from `base`.
+# Colours: names (red, bright_blue, gray), #rrggbb, #rgb or 0-255.
+#
+# [themes.mytheme]
+# base = "nord"
+# title = "#ff79c6"
+# key = "bright_cyan"
+# value = "white"
+# separator = "gray"
+# rule = "gray"
+# bar = "green"
+# bar_empty = "gray"
+# warn = "yellow"
+# critical = "red"
+# logo = ["#ff79c6", "#8be9fd"]
