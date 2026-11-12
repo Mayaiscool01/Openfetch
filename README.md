@@ -102,7 +102,15 @@ archive for your machine, unpack it, and copy `openfetch` somewhere on your
 `PATH` (for example `~/.local/bin`).
 
 From source:
-
+macOS/OSX install:
+```sh
+brew install rust
+git clone -b macos-port https://github.com/Mayaiscool01/Openfetch
+cd Openfetch
+cargo build --release --locked
+./target/release/openfetch
+```
+Linux install:
 ```sh
 cargo install --path . --locked                 # to ~/.cargo/bin
 # or system-wide
