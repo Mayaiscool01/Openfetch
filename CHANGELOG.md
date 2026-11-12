@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0
+
+- macOS support: OS version and name, host model, firmware, CPU, memory,
+  disks, GPU, displays, battery, Homebrew/MacPorts package counts, network,
+  light/dark appearance, and a macOS logo.
+- CI now runs on macOS too; releases include macOS binaries.
+
 ## 0.4.0
 
 - First public release.

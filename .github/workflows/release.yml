@@ -1,4 +1,5 @@
-# Push a tag like v0.3.1 to build Linux binaries and attach them to a GitHub release.
+# Push a tag like v0.5.0 to build Linux and macOS binaries and attach them to a
+# GitHub release.
 name: Release
 on:
   push:
@@ -10,26 +11,35 @@ permissions:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - runner: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
           - runner: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
+          - runner: macos-latest
+            target: aarch64-apple-darwin
+          - runner: macos-latest
+            target: x86_64-apple-darwin
+            cross: true
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
+      - name: Add target
+        run: rustup target add ${{ matrix.target }}
       - name: Test
+        if: ${{ !matrix.cross }}
         run: cargo test --locked
       - name: Build
-        run: cargo build --release --locked
+        run: cargo build --release --locked --target ${{ matrix.target }}
       - name: Package
         run: |
           name="openfetch-${GITHUB_REF_NAME}-${{ matrix.target }}"
           mkdir "$name"
-          cp target/release/openfetch README.md LICENSE NOTICE CHANGELOG.md src/default_config.toml "$name"/
+          cp "target/${{ matrix.target }}/release/openfetch" README.md LICENSE NOTICE CHANGELOG.md src/default_config.toml "$name"/
           tar czf "$name.tar.gz" "$name"
-          sha256sum "$name.tar.gz" > "$name.tar.gz.sha256"
+          shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}

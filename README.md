@@ -4,7 +4,7 @@
 
 # OpenFetch
 
-A fast, customisable system info tool for Linux, written in Rust. Block-art
+A fast, customisable system info tool for Linux and macOS, written in Rust. Block-art
 distro logos, themes, a live dashboard, animated and image logos.
 
 Think Fastfetch, with more modules, themes you can write yourself, a documented
@@ -80,7 +80,7 @@ Rust 1.75, but recent versions have not been built on a toolchain that old.
 ```sh
 git clone https://github.com/Mayaiscool01/Openfetch openfetch && cd openfetch
 cargo build --release --locked        # binary: target/release/openfetch
-cargo test --locked                   # 126 unit tests + 23 end-to-end tests
+cargo test --locked                   # 135 unit tests + 23 end-to-end tests
 ./target/release/openfetch
 ```
 
@@ -92,11 +92,13 @@ Build dependencies per distro (just a Rust toolchain and a C linker):
 | Arch | `sudo pacman -S rust gcc` |
 | Fedora | `sudo dnf install cargo gcc` |
 | openSUSE | `sudo zypper install cargo gcc` |
+| macOS | `brew install rust` (plus the Xcode command line tools) |
 | Anywhere | [rustup](https://rustup.rs) |
 
 ## Install
 
-Prebuilt binaries for x86_64 and aarch64 Linux are attached to each
+Prebuilt binaries for Linux and macOS (x86_64 and aarch64 / Apple Silicon) are
+attached to each
 [release](https://github.com/Mayaiscool01/Openfetch/releases): download the
 archive for your machine, unpack it, and copy `openfetch` somewhere on your
 `PATH` (for example `~/.local/bin`).
@@ -320,6 +322,7 @@ src/
   storage.rs    mounts, pseudo-fs filtering, btrfs subvolume de-duplication
   network.rs    interfaces, default route, local IP
   desktop.rs    DE, WM / compositor, display resolution
+  macos.rs      macOS probes (sw_vers, system_profiler, pmset, ioreg, route)
   logo.rs       logos (ASCII + block), colour markers, distro detection
   animation.rs  effects (incl. spin), GIF/custom frames, ratatui inline renderer
   bitmap.rs     image/GIF decoding, half-block pixel rendering
@@ -340,6 +343,18 @@ the 200 ms minimum interval `sysinfo` requires to compute a CPU usage figure.
 Peak memory is roughly 14 MiB and the binary is about 2.3 MB. No background processes or threads are started.
 
 ## Platform notes and known limitations
+
+- **macOS** support is new in 0.5.0. It is built and tested automatically on
+  GitHub's Apple Silicon macOS machines, which are virtual and have no screen,
+  GPU or battery, so the GPU, display and battery rows have not yet been seen
+  working on a real Mac. Not available on macOS: CPU temperature, motherboard,
+  icon/cursor/font themes. Packages count Homebrew formulae and casks and
+  MacPorts. `system_profiler` makes the host, GPU and display rows slow
+  (around half a second); remove those modules for a faster start. A
+  downloaded binary may need `xattr -d com.apple.quarantine openfetch` before
+  macOS lets it run.
+- The macOS logo is the command-key symbol (⌘), not Apple's logo. Use
+  `--image` if you want a different picture.
 
 - **Resolution** is the connector's preferred DRM mode, not the scaled logical
   resolution. The refresh rate and monitor name come from the EDID's preferred

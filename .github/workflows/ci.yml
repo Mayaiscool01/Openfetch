@@ -29,3 +29,7 @@ jobs:
         run: |
           cargo run --locked -q -- --noip --ascii
           cargo run --locked -q -- --noip --json
+      - name: Check network detection (prints no addresses)
+        run: |
+          cargo run --locked -q -- --json > full.json
+          python3 -c "import json; n=json.load(open('full.json'))['network']; print('primary:', n['primary'], '| local ip found:', bool(n['local_ip']), '| interfaces:', [(i['name'], i['up'], len(i['addresses'])) for i in n['interfaces']])"

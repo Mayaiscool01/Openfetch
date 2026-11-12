@@ -1,6 +1,6 @@
 # RPM spec for Fedora / openSUSE (build with: rpmbuild -ba packaging/openfetch.spec)
 Name:           openfetch
-Version:        0.4.0
+Version:        0.5.0
 Release:        1%{?dist}
 Summary:        Fast, customisable system information and visualisation tool
 License:        MIT
@@ -33,5 +33,5 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 %{_datadir}/openfetch/config.toml
 
 %changelog
-* Tue Nov 10 2026 Mayaiscool01 - 0.4.0-1
+* Tue Nov 10 2026 Mayaiscool01 - 0.5.0-1
 - Initial package
