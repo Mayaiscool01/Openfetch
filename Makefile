@@ -1,4 +1,3 @@
-# Simple install helper; distro packagers can use DESTDIR and PREFIX.
 PREFIX  ?= /usr/local
 DESTDIR ?=
 BIN      = target/release/openfetch
