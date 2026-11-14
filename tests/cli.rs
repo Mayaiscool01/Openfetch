@@ -1,4 +1,4 @@
-//! End-to-end tests that run the real `openfetch` binary.
+
 
 use std::path::PathBuf;
 use std::process::{Command, Output};
@@ -220,7 +220,7 @@ fn init_config_writes_once() {
         run(&["--init-config", "--config", &arg]).status.code(),
         Some(1)
     );
-    // and the generated file is itself loadable
+  
     assert!(run(&["--config", &arg, "--compact"]).status.success());
 }
 
@@ -256,7 +256,7 @@ fn narrow_terminals_hide_the_logo_and_truncate() {
 }
 
 fn png(name: &str) -> String {
-    // 2x2 opaque red PNG
+    
     const PNG: &[u8] = &[
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44,
         0x52, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02, 0x08, 0x02, 0x00, 0x00, 0x00, 0xfd,
@@ -277,7 +277,7 @@ fn image_can_be_used_as_the_logo() {
     let out = stdout(&o);
     assert!(out.contains('█'), "{out}");
     assert!(out.lines().count() >= 4);
-    // from the config file, beside the info
+    
     let cfg = write_config(
         "image.toml",
         &format!("[logo]\nimage = \"{img}\"\nimage_width = 12\n"),
@@ -307,7 +307,6 @@ fn tui_refuses_to_run_without_a_terminal() {
     assert!(String::from_utf8_lossy(&o.stderr).contains("interactive terminal"));
 }
 
-/// Every IPv4-looking token in `text`.
 fn ipv4s(text: &str) -> Vec<String> {
     text.split(|c: char| !(c.is_ascii_digit() || c == '.'))
         .filter(|t| {
@@ -340,7 +339,7 @@ fn noip_hides_addresses_everywhere() {
     }
     let v: serde_json::Value = serde_json::from_slice(&run(&["--noip", "--json"]).stdout).unwrap();
     assert!(v["network"].is_null());
-    // the flat layout too, and from the config file
+  
     let cfg = write_config(
         "noip.toml",
         "[general]\nhide_ip = true\n[layout]\nframe = \"flat\"\n",
