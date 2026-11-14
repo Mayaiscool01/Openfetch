@@ -6,6 +6,7 @@
 - Solid block logos for every built-in distro (Debian, Ubuntu, openSUSE and
   Tux join Arch and Fedora), drawn with two coloured pixels per cell.
 - `--noip` / `hide_ip`: hide IP addresses before sharing a screenshot.
+  (--noip may not work with --tui, untested)
 
 ## 0.3.2
 
