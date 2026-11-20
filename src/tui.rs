@@ -1,7 +1,5 @@
 //! Live full-screen dashboard: `openfetch --tui`.
-//!
-//! The same boxed sections as the normal output, plus live CPU / memory /
-//! disk / network panels, with the logo (optionally spinning) beside them.
+
 
 use crate::animation::{ratatui_color, to_ratatui, Animation};
 use crate::config::{Config, LogoPosition, ModuleEntry, SectionConfig};
