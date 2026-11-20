@@ -1,6 +1,5 @@
 //! Live full-screen dashboard: `openfetch --tui`.
 
-
 use crate::animation::{ratatui_color, to_ratatui, Animation};
 use crate::config::{Config, LogoPosition, ModuleEntry, SectionConfig};
 use crate::memory::percent;

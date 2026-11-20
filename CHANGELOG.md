@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- `--trans` and `--transtui`: show the logo in trans flag stripes, in the
+  normal output or the live dashboard.
+- `--flag NAME` for other pride flags (pride, nonbinary, lesbian, bi, pan,
+  ace), `--list-flags`, and `flag = "..."` under `[logo]` in the config.
+
 ## 0.4.0
 
 - First public release.

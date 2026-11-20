@@ -1,5 +1,3 @@
-
-
 use std::path::PathBuf;
 use std::process::{Command, Output};
 
@@ -220,7 +218,7 @@ fn init_config_writes_once() {
         run(&["--init-config", "--config", &arg]).status.code(),
         Some(1)
     );
-  
+
     assert!(run(&["--config", &arg, "--compact"]).status.success());
 }
 
@@ -256,7 +254,6 @@ fn narrow_terminals_hide_the_logo_and_truncate() {
 }
 
 fn png(name: &str) -> String {
-    
     const PNG: &[u8] = &[
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44,
         0x52, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02, 0x08, 0x02, 0x00, 0x00, 0x00, 0xfd,
@@ -277,7 +274,7 @@ fn image_can_be_used_as_the_logo() {
     let out = stdout(&o);
     assert!(out.contains('█'), "{out}");
     assert!(out.lines().count() >= 4);
-    
+
     let cfg = write_config(
         "image.toml",
         &format!("[logo]\nimage = \"{img}\"\nimage_width = 12\n"),
@@ -339,7 +336,7 @@ fn noip_hides_addresses_everywhere() {
     }
     let v: serde_json::Value = serde_json::from_slice(&run(&["--noip", "--json"]).stdout).unwrap();
     assert!(v["network"].is_null());
-  
+
     let cfg = write_config(
         "noip.toml",
         "[general]\nhide_ip = true\n[layout]\nframe = \"flat\"\n",
@@ -347,4 +344,76 @@ fn noip_hides_addresses_everywhere() {
     let out = stdout(&run(&["--config", &cfg]));
     assert!(ipv4s(&out).is_empty() && !out.contains("Network"), "{out}");
     assert!(out.contains("Kernel:"), "everything else is still shown");
+}
+
+/// Run with colours forced on and a truecolor terminal.
+fn run_truecolor(args: &[&str]) -> Output {
+    let cfg = write_config("truecolor.toml", "[general]\ncolor = \"always\"\n");
+    let mut all = vec!["--config", cfg.as_str()];
+    all.extend_from_slice(args);
+    Command::new(env!("CARGO_BIN_EXE_openfetch"))
+        .args(&all)
+        .env("HOME", home())
+        .env("TERM", "xterm-256color")
+        .env("COLORTERM", "truecolor")
+        .env("LANG", "en_US.UTF-8")
+        .env_remove("NO_COLOR")
+        .output()
+        .expect("binary runs")
+}
+
+#[test]
+fn trans_flag_colours_the_logo() {
+    const BLUE: &str = "38;2;91;206;250";
+    const PINK: &str = "38;2;245;169;184";
+    for distro in ["arch", "fedora", "debian"] {
+        let o = run_truecolor(&["--trans", "--logo", distro]);
+        assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+        let out = stdout(&o);
+        assert!(out.contains(BLUE) && out.contains(PINK), "{distro}: {out}");
+    }
+    // plain run without the flag keeps the distro colours
+    let plain = stdout(&run_truecolor(&["--logo", "arch"]));
+    assert!(!plain.contains(PINK));
+    // ASCII logos are striped too
+    let ascii = stdout(&run_truecolor(&["--trans", "--logo", "ubuntu", "--ascii"]));
+    assert!(ascii.contains(BLUE) && ascii.contains(PINK), "{ascii}");
+    // other flags
+    let pride = stdout(&run_truecolor(&["--flag", "pride", "--logo", "arch"]));
+    assert!(
+        pride.contains("38;2;228;3;3"),
+        "red stripe of the pride flag"
+    );
+}
+
+#[test]
+fn flag_from_config_and_errors() {
+    let cfg = write_config(
+        "flagcfg.toml",
+        "[general]\ncolor = \"always\"\n[logo]\nflag = \"trans\"\n",
+    );
+    let o = Command::new(env!("CARGO_BIN_EXE_openfetch"))
+        .args(["--config", &cfg, "--logo", "arch"])
+        .env("HOME", home())
+        .env("COLORTERM", "truecolor")
+        .env("LANG", "en_US.UTF-8")
+        .output()
+        .unwrap();
+    assert!(stdout(&o).contains("38;2;245;169;184"));
+    let bad = run(&["--flag", "nope"]);
+    assert_eq!(bad.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&bad.stderr).contains("available: trans"));
+    let list = stdout(&run(&["--list-flags"]));
+    for f in ["trans", "pride", "nonbinary", "lesbian", "bi", "pan", "ace"] {
+        assert!(list.contains(f), "{list}");
+    }
+}
+
+#[test]
+fn transtui_starts_the_dashboard() {
+    // without a terminal the dashboard refuses to start, which shows that
+    // --transtui really asks for it
+    let o = run(&["--transtui"]);
+    assert_eq!(o.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&o.stderr).contains("interactive terminal"));
 }
