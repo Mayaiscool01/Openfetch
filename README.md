@@ -154,6 +154,9 @@ openfetch --init-config      write a documented default config
 openfetch --distro NAME      use another distro's logo in the normal output
 openfetch --theme NAME       override the theme
 openfetch --noip             hide IP addresses (before sharing a screenshot)
+openfetch --trans            logo in trans flag stripes
+openfetch --transtui         live dashboard with the trans flag logo
+openfetch --flag NAME        logo in a pride flag (see --list-flags)
 openfetch --ascii            ASCII only
 openfetch --no-color         no colours
 openfetch --list-themes | --list-logos
@@ -163,6 +166,20 @@ Animations run in place below your prompt until you press a key (or for
 `animation.duration` seconds); the last frame stays in your scrollback. They
 never run when output is piped, and if the terminal does not answer the cursor
 position query OpenFetch falls back to static output.
+
+## Pride flag logos (`--trans`, `--flag`)
+
+```sh
+openfetch --trans              # trans flag stripes on your distro's logo
+openfetch --transtui           # the same, in the live dashboard
+openfetch --flag pride         # also: nonbinary, lesbian, bi, pan, ace
+openfetch --list-flags
+```
+
+The stripes go top to bottom across whatever logo is showing: built-in
+distro logos, ASCII logos, your own `--image` picture or GIF, and the spin
+and other animations. To keep it on for every run, set `flag = "trans"`
+under `[logo]` in the config.
 
 ## Sharing screenshots (`--noip`)
 

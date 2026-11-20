@@ -46,6 +46,18 @@ pub struct Cli {
     #[arg(long)]
     pub tui: bool,
 
+    /// Live dashboard with the logo in trans flag colours (--tui --trans)
+    #[arg(long)]
+    pub transtui: bool,
+
+    /// Colour the logo in trans flag stripes
+    #[arg(long, conflicts_with = "flag")]
+    pub trans: bool,
+
+    /// Colour the logo in a pride flag: trans, pride, nonbinary, lesbian, bi, pan, ace
+    #[arg(long, value_name = "NAME")]
+    pub flag: Option<String>,
+
     /// Refresh interval for --tui in milliseconds
     #[arg(long, value_name = "MS")]
     pub interval: Option<u64>,
@@ -73,9 +85,27 @@ pub struct Cli {
     /// List the built-in logos and exit
     #[arg(long)]
     pub list_logos: bool,
+
+    /// List the pride flags for --flag and exit
+    #[arg(long)]
+    pub list_flags: bool,
 }
 
 impl Cli {
+    /// The live dashboard was asked for (`--tui` or `--transtui`).
+    pub fn wants_tui(&self) -> bool {
+        self.tui || self.transtui
+    }
+
+    /// Flag requested on the command line, if any.
+    pub fn flag_name(&self) -> Option<&str> {
+        if self.trans || self.transtui {
+            Some("trans")
+        } else {
+            self.flag.as_deref()
+        }
+    }
+
     /// `--config` without a value asks to show the active configuration.
     pub fn show_config(&self) -> bool {
         matches!(self.config.as_deref(), Some(""))
@@ -159,6 +189,22 @@ mod tests {
         assert!(parse(&["--noip"]).noip);
         assert!(parse(&["--no-ip"]).noip);
         assert!(!parse(&[]).noip);
+    }
+
+    #[test]
+    fn pride_flag_options() {
+        let c = parse(&["--trans"]);
+        assert_eq!(c.flag_name(), Some("trans"));
+        assert!(!c.wants_tui());
+        let c = parse(&["--transtui"]);
+        assert_eq!(c.flag_name(), Some("trans"));
+        assert!(c.wants_tui());
+        let c = parse(&["--flag", "pride", "--tui"]);
+        assert_eq!(c.flag_name(), Some("pride"));
+        assert!(c.wants_tui());
+        assert_eq!(parse(&[]).flag_name(), None);
+        assert!(parse(&["--list-flags"]).list_flags);
+        assert!(Cli::try_parse_from(["openfetch", "--trans", "--flag", "bi"]).is_err());
     }
 
     #[test]

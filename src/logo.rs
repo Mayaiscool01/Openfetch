@@ -104,6 +104,106 @@ impl Parsed {
     }
 }
 
+/// A pride flag: name, aliases, and stripe colours from top to bottom.
+pub type Flag = (
+    &'static str,
+    &'static [&'static str],
+    &'static [(u8, u8, u8)],
+);
+
+/// Pride flags for `--flag`.
+pub const FLAGS: &[Flag] = &[
+    (
+        "trans",
+        &["transgender"],
+        &[
+            (91, 206, 250),
+            (245, 169, 184),
+            (255, 255, 255),
+            (245, 169, 184),
+            (91, 206, 250),
+        ],
+    ),
+    (
+        "pride",
+        &["rainbow", "gay"],
+        &[
+            (228, 3, 3),
+            (255, 140, 0),
+            (255, 237, 0),
+            (0, 128, 38),
+            (0, 77, 255),
+            (117, 7, 135),
+        ],
+    ),
+    (
+        "nonbinary",
+        &["enby", "nb"],
+        &[
+            (252, 244, 52),
+            (255, 255, 255),
+            (156, 89, 209),
+            (60, 60, 60),
+        ],
+    ),
+    (
+        "lesbian",
+        &[],
+        &[
+            (213, 45, 0),
+            (255, 154, 86),
+            (255, 255, 255),
+            (211, 98, 164),
+            (163, 2, 98),
+        ],
+    ),
+    (
+        "bi",
+        &["bisexual"],
+        &[
+            (214, 2, 112),
+            (214, 2, 112),
+            (155, 79, 150),
+            (0, 56, 168),
+            (0, 56, 168),
+        ],
+    ),
+    (
+        "pan",
+        &["pansexual"],
+        &[(255, 33, 140), (255, 216, 0), (33, 177, 255)],
+    ),
+    (
+        "ace",
+        &["asexual"],
+        &[
+            (60, 60, 60),
+            (163, 163, 163),
+            (255, 255, 255),
+            (128, 0, 128),
+        ],
+    ),
+];
+
+/// Stripe colours of a pride flag, by name or alias.
+pub fn flag_colors(name: &str) -> Result<Vec<ColorSpec>, String> {
+    let n = name.trim().to_ascii_lowercase();
+    FLAGS
+        .iter()
+        .find(|(id, aliases, _)| *id == n || aliases.contains(&n.as_str()))
+        .map(|(_, _, c)| c.iter().map(|&(r, g, b)| ColorSpec::Rgb(r, g, b)).collect())
+        .ok_or_else(|| {
+            let names: Vec<&str> = FLAGS.iter().map(|(id, _, _)| *id).collect();
+            format!("unknown flag '{name}' (available: {})", names.join(", "))
+        })
+}
+
+/// Index of the stripe for row `y` when `n` stripes span rows `top..=bottom`.
+fn stripe(y: usize, top: usize, bottom: usize, n: usize) -> usize {
+    let span = (bottom + 1).saturating_sub(top).max(1);
+    ((y.saturating_sub(top)) * n / span).min(n - 1)
+}
+
 /// What is drawn as the logo: text cells, or pixel images (PNG/JPEG/GIF).
 #[derive(Debug, Clone)]
 pub enum Art {
@@ -129,6 +229,49 @@ impl Art {
                     .collect(),
             ),
             cells => cells,
+        }
+    }
+
+    /// Recolour in horizontal flag stripes, spread over the visible rows of
+    /// the logo. Text logos must then be drawn with `colors` as the palette.
+    pub fn striped(self, colors: &[ColorSpec]) -> Art {
+        let n = colors.len();
+        if n == 0 {
+            return self;
+        }
+        match self {
+            Art::Cells(mut p) => {
+                let used: Vec<usize> = (0..p.rows.len())
+                    .filter(|y| p.rows[*y].iter().any(|c| c.ch != ' '))
+                    .collect();
+                let (top, bottom) = (
+                    used.first().copied().unwrap_or(0),
+                    used.last().copied().unwrap_or(0),
+                );
+                for (y, row) in p.rows.iter_mut().enumerate() {
+                    let slot = stripe(y, top, bottom, n) as u8 + 1;
+                    for cell in row.iter_mut() {
+                        cell.slot = slot;
+                    }
+                }
+                Art::Cells(p)
+            }
+            Art::Images(frames) => Art::Images(
+                frames
+                    .into_iter()
+                    .map(|(b, d)| {
+                        let used: Vec<usize> = (0..b.h)
+                            .filter(|y| (0..b.w).any(|x| b.get(x, *y).is_some()))
+                            .collect();
+                        let (top, bottom) = (
+                            used.first().copied().unwrap_or(0),
+                            used.last().copied().unwrap_or(0),
+                        );
+                        let striped = b.map(|_, y, _| colors[stripe(y, top, bottom, n)].to_rgb());
+                        (striped, d)
+                    })
+                    .collect(),
+            ),
         }
     }
 
@@ -904,6 +1047,69 @@ mod tests {
             }
             assert!(small.len() < large.len(), "{}", b.id);
         }
+    }
+
+    #[test]
+    fn flag_names_and_aliases() {
+        let trans = flag_colors("trans").unwrap();
+        assert_eq!(trans.len(), 5);
+        assert_eq!(trans[0], ColorSpec::Rgb(91, 206, 250));
+        assert_eq!(trans[2], ColorSpec::Rgb(255, 255, 255));
+        assert_eq!(flag_colors("Transgender").unwrap(), trans);
+        assert_eq!(flag_colors("rainbow").unwrap().len(), 6);
+        assert!(flag_colors("enby").is_ok() && flag_colors("pan").is_ok());
+        let err = flag_colors("nope").unwrap_err();
+        assert!(err.contains("trans") && err.contains("pride"), "{err}");
+    }
+
+    #[test]
+    fn stripes_span_the_visible_rows() {
+        assert_eq!(stripe(0, 0, 9, 5), 0);
+        assert_eq!(stripe(9, 0, 9, 5), 4);
+        assert_eq!(stripe(5, 0, 9, 5), 2);
+        assert_eq!(
+            stripe(2, 4, 9, 3),
+            0,
+            "rows above the logo use the first stripe"
+        );
+        assert_eq!(stripe(20, 0, 9, 3), 2, "rows below use the last");
+    }
+
+    #[test]
+    fn block_logos_get_flag_stripes_top_to_bottom() {
+        let flag = flag_colors("trans").unwrap();
+        let sel = select(&LogoConfig::default(), Some("arch"), None).unwrap();
+        let art = sel.art(false, true, "auto", &sel.palette).striped(&flag);
+        let Art::Images(frames) = &art else {
+            panic!("arch is block art")
+        };
+        let b = &frames[0].0;
+        let row_colour = |y: usize| (0..b.w).find_map(|x| b.get(x, y));
+        let first = (0..b.h).find(|y| row_colour(*y).is_some()).unwrap();
+        let last = (0..b.h).rev().find(|y| row_colour(*y).is_some()).unwrap();
+        assert_eq!(row_colour(first), Some((91, 206, 250)), "blue on top");
+        assert_eq!(row_colour(last), Some((91, 206, 250)), "blue at the bottom");
+        assert_eq!(
+            row_colour((first + last) / 2),
+            Some((255, 255, 255)),
+            "white middle"
+        );
+        let used: std::collections::HashSet<_> = (0..b.h).filter_map(row_colour).collect();
+        assert_eq!(used.len(), 3, "blue, pink and white only");
+    }
+
+    #[test]
+    fn text_logos_get_one_stripe_slot_per_row() {
+        let art = Art::Cells(Parsed::parse("$1ab\n$2cd\n$1ef\n$2gh\n"))
+            .striped(&[ColorSpec::Rgb(1, 1, 1), ColorSpec::Rgb(2, 2, 2)]);
+        let Art::Cells(p) = art else { panic!() };
+        let slots: Vec<u8> = p.rows.iter().map(|r| r[0].slot).collect();
+        assert_eq!(slots, vec![1, 1, 2, 2]);
+        assert!(p.rows.iter().all(|r| r.iter().all(|c| c.slot == r[0].slot)));
+        // no colours: unchanged
+        let same = Art::Cells(Parsed::parse("$2x")).striped(&[]);
+        let Art::Cells(p) = same else { panic!() };
+        assert_eq!(p.rows[0][0].slot, 2);
     }
 
     #[test]

@@ -105,6 +105,9 @@ pub struct LogoConfig {
     pub image: Option<String>,
     /// Width of the image logo in terminal columns.
     pub image_width: usize,
+    /// Pride flag stripes for the logo (`trans`, `pride`, ...), like `--flag`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub flag: Option<String>,
 }
 
 /// Settings of the live full-screen mode (`openfetch --tui`).
@@ -243,6 +246,7 @@ impl Default for LogoConfig {
             colors: None,
             image: None,
             image_width: 36,
+            flag: None,
         }
     }
 }

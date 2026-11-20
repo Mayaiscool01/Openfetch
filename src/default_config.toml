@@ -100,6 +100,9 @@ image_width = 36
 # lines = ["$1  /\\", "$1 /  \\", "$2/____\\"]
 # Palette used for the $1..$9 markers (overrides distro and theme colours).
 # colors = ["#ff5f6d", "#ffc371"]
+# Colour the logo in pride flag stripes, for every run (same as --flag).
+# trans, pride, nonbinary, lesbian, bi, pan, ace  (see openfetch --list-flags)
+# flag = "trans"
 
 [animation]
 # Animation is off by default. `openfetch --animation` turns it on for one run.

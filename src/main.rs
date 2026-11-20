@@ -82,6 +82,19 @@ fn run() -> Result<(), String> {
     if cli.list_themes {
         return emit(&format!("{}\n", theme::BUILTIN_NAMES.join("\n")));
     }
+    if cli.list_flags {
+        let list: String = logo::FLAGS
+            .iter()
+            .map(|(id, aliases, _)| {
+                if aliases.is_empty() {
+                    format!("{id}\n")
+                } else {
+                    format!("{id:<10} (also: {})\n", aliases.join(", "))
+                }
+            })
+            .collect();
+        return emit(&list);
+    }
     if cli.list_logos {
         let list: String = logo::BUILTINS
             .iter()
@@ -197,8 +210,24 @@ fn run() -> Result<(), String> {
         None => text_art(),
     };
 
+    // pride flag stripes (--trans, --transtui, --flag, or logo.flag)
+    let (art, palette) = match cli.flag_name() {
+        Some(name) => {
+            let colors = logo::flag_colors(name)?;
+            (art.striped(&colors), colors)
+        }
+        None => match cfg.logo.flag.as_deref().map(logo::flag_colors) {
+            Some(Ok(colors)) => (art.striped(&colors), colors),
+            Some(Err(e)) => {
+                eprintln!("openfetch: {e}; ignoring logo.flag");
+                (art, palette)
+            }
+            None => (art, palette),
+        },
+    };
+
     // without colours a picture is drawn as one solid shape
-    let art = if depth == ColorDepth::None && !cli.tui {
+    let art = if depth == ColorDepth::None && !cli.wants_tui() {
         art.mono()
     } else {
         art
@@ -210,7 +239,7 @@ fn run() -> Result<(), String> {
 
     // ---- information
     let panels = !compact && cfg.layout.frame == Frame::Panels;
-    let entries: Vec<ModuleEntry> = if panels || cli.tui {
+    let entries: Vec<ModuleEntry> = if panels || cli.wants_tui() {
         cfg.sections
             .iter()
             .flat_map(|s| s.modules.clone())
@@ -236,7 +265,7 @@ fn run() -> Result<(), String> {
     }
 
     // ---- live dashboard
-    if cli.tui {
+    if cli.wants_tui() {
         if !stdout_tty || !io::stdin().is_terminal() {
             return Err("--tui needs an interactive terminal".into());
         }
