@@ -1,5 +1,5 @@
 //! Collects everything into one [`SystemInfo`] value; also hosts firmware,
-//! motherboard and battery detection.
+//! motherboard and battery detection. ehh
 
 use crate::{cpu, desktop, gpu, memory, network, os, storage};
 use serde::Serialize;
