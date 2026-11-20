@@ -1,4 +1,4 @@
-//! Colours, colour-depth detection and themes.
+//! god i hate life rn
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
