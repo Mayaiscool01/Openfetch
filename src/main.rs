@@ -296,7 +296,8 @@ fn run() -> Result<(), String> {
             fps: cfg.animation.fps,
         };
         let still = art.lines(&palette);
-        let app = tui::App::new(cfg.clone(), info, theme_name, theme, cs, depth, still, anim);
+        let app = tui::App::new(cfg.clone(), info, theme_name, theme, cs, depth, still, anim)
+            .with_flag(flag.clone().filter(|_| cfg.tui.flag_panels));
         return tui::run(app, tui_opts).map_err(|e| e.to_string());
     }
 

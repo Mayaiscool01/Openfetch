@@ -11,6 +11,10 @@
   off for one run. `--list-flags` lists them.
 - Mixed flags: `--flag trans+lesbian`, `--flag trans+gay`, ... (up to four);
   each flag paints a diagonal slice of the logo.
+- `--tui` with a flag paints the dashboard too: usage bars show the flag's
+  stripes, CPU / network graphs and panel titles run through its colours,
+  and the info arrows go down each panel in stripe order. Turn it off with
+  `flag_panels = false` under `[tui]`.
 
 ## 0.4.0
 

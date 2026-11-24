@@ -61,7 +61,9 @@ battery inside a VM, are simply left out.)
   umbrella), `--flag pride` (or `lgbtq`), `lesbian`, `bi`, `pan`, `ace`, `aro` paint any distro's logo in
   the flag's stripes; set `flag = "trans"` under `[logo]` to keep it. Mix up
   to four with `+` (`--flag trans+lesbian`, `--flag trans+gay`): each flag
-  gets a diagonal slice of the logo.
+  gets a diagonal slice of the logo. In `--tui` the flag paints the usage
+  bars, graphs, panel titles and arrows too (`flag_panels = false` under
+  `[tui]` keeps it to the logo).
 - **Live dashboard:** `openfetch --tui` is a full-screen view with live CPU
   (total, history graph, per-core), memory, swap, disk and network panels next
   to the logo and the same boxes. The logo spins by default.

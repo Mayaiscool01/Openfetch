@@ -2,6 +2,7 @@
 
 use crate::animation::{ratatui_color, to_ratatui, Animation};
 use crate::config::{Config, LogoPosition, ModuleEntry, SectionConfig};
+use crate::flag::{self, Paint};
 use crate::memory::percent;
 use crate::output::{self, format_bytes, format_uptime, line_width, Charset, Ctx, Line};
 use crate::storage::{self, DiskInfo};
@@ -182,6 +183,8 @@ pub struct App {
     started: Instant,
     sections: Vec<(String, Vec<Line>)>,
     pub live: Live,
+    /// Pride flag painted over bars, graphs, titles and arrows.
+    flag: Option<Paint>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -220,9 +223,66 @@ impl App {
             started: Instant::now(),
             sections: Vec::new(),
             live: Live::default(),
+            flag: None,
         };
         app.rebuild_sections();
         app
+    }
+
+    /// Paint the panels in a pride flag (ignored without colours).
+    pub fn with_flag(mut self, flag: Option<Paint>) -> App {
+        self.flag = flag.filter(|_| self.depth != ColorDepth::None);
+        self
+    }
+
+    /// Flag colour at position `i` of `n`, running through every stripe.
+    fn flag_rgb(&self, i: usize, n: usize) -> Option<flag::Rgb> {
+        let p = self.flag.as_ref()?;
+        let count = p.count();
+        Some(p.rgb((i * count / n.max(1)).min(count - 1)))
+    }
+
+    fn flag_at(&self, i: usize, n: usize) -> Option<ratatui::style::Color> {
+        self.flag_rgb(i, n)
+            .map(|(r, g, b)| self.rc(ColorSpec::Rgb(r, g, b)))
+    }
+
+    /// A usage bar whose filled part shows the whole flag, with the label
+    /// on top in a colour that reads on each stripe.
+    fn flag_bar(&self, pct: f32, label: &str, width: usize) -> RLine<'static> {
+        let filled = ((pct / 100.0).clamp(0.0, 1.0) * width as f32).round() as usize;
+        let filled = if pct > 0.0 { filled.max(1) } else { 0 };
+        let chars: Vec<char> = label.chars().collect();
+        let start = width.saturating_sub(chars.len()) / 2;
+        let spans = (0..width)
+            .map(|x| {
+                let ch = x
+                    .checked_sub(start)
+                    .and_then(|i| chars.get(i))
+                    .copied()
+                    .unwrap_or(' ');
+                let mut st = Style::default().add_modifier(Modifier::BOLD);
+                match self.flag_rgb(x, filled) {
+                    Some(c) if x < filled => {
+                        let text = if flag::luma(c) > 0.55 {
+                            (20, 20, 28)
+                        } else {
+                            (255, 255, 255)
+                        };
+                        st = st
+                            .bg(self.rc(ColorSpec::Rgb(c.0, c.1, c.2)))
+                            .fg(self.rc(ColorSpec::Rgb(text.0, text.1, text.2)));
+                    }
+                    _ => {
+                        st = st
+                            .bg(self.rc(self.theme.bar_empty))
+                            .fg(self.rc(self.theme.value));
+                    }
+                }
+                RSpan::styled(ch.to_string(), st)
+            })
+            .collect::<Vec<_>>();
+        RLine::from(spans)
     }
 
     fn rebuild_sections(&mut self) {
@@ -349,12 +409,7 @@ impl App {
             .borders(Borders::ALL)
             .padding(Padding::horizontal(1))
             .border_style(Style::default().fg(self.rc(self.theme.rule)))
-            .title(RSpan::styled(
-                format!(" {title} "),
-                Style::default()
-                    .fg(self.rc(self.theme.title))
-                    .add_modifier(Modifier::BOLD),
-            ));
+            .title(self.title(title));
         if self.cs.unicode {
             b.border_type(ratatui::widgets::BorderType::Rounded)
         } else {
@@ -369,6 +424,28 @@ impl App {
                 horizontal_bottom: "-",
             })
         }
+    }
+
+    /// Panel title; with a flag every letter takes the next stripe.
+    fn title(&self, title: &str) -> RLine<'static> {
+        let text = format!(" {title} ");
+        let bold = Style::default().add_modifier(Modifier::BOLD);
+        if self.flag.is_none() {
+            return RLine::from(RSpan::styled(text, bold.fg(self.rc(self.theme.title))));
+        }
+        let n = text.chars().count();
+        RLine::from(
+            text.chars()
+                .enumerate()
+                .map(|(i, c)| {
+                    let st = match self.flag_at(i, n) {
+                        Some(col) => bold.fg(col),
+                        None => bold,
+                    };
+                    RSpan::styled(c.to_string(), st)
+                })
+                .collect::<Vec<_>>(),
+        )
     }
 
     fn gauge(&self, pct: f32, label: String) -> Gauge<'static> {
@@ -499,10 +576,59 @@ pub fn draw(f: &mut Frame, app: &App) {
 
 fn draw_info(f: &mut Frame, app: &App, i: usize, rect: Rect) {
     let (title, lines) = &app.sections[i];
+    let block = app.block(title);
+    let inner = block.inner(rect);
     f.render_widget(
-        Paragraph::new(to_ratatui(lines, app.depth)).block(app.block(title)),
+        Paragraph::new(to_ratatui(lines, app.depth)).block(block),
         rect,
     );
+    // the bullet arrows run down the panel in the flag's stripes
+    if app.flag.is_some() {
+        let rows = inner.height as usize;
+        let buf = f.buffer_mut();
+        for (row, y) in (inner.y..inner.bottom()).enumerate() {
+            let Some(x) = (inner.x..inner.right()).find(|&x| buf.get(x, y).symbol() != " ") else {
+                continue;
+            };
+            if !matches!(buf.get(x, y).symbol(), "→" | "-" | ">" | "•" | "*" | "»") {
+                continue;
+            }
+            if let Some(c) = app.flag_at(row, rows) {
+                buf.get_mut(x, y).set_fg(c);
+                if x + 1 < inner.right() && buf.get(x + 1, y).symbol() == ">" {
+                    buf.get_mut(x + 1, y).set_fg(c);
+                }
+            }
+        }
+    }
+}
+
+/// A usage bar: the flag's stripes with a flag, a plain gauge without.
+fn draw_gauge(f: &mut Frame, app: &App, pct: f32, label: String, area: Rect) {
+    if app.flag.is_some() {
+        f.render_widget(
+            Paragraph::new(app.flag_bar(pct, &label, area.width as usize)),
+            area,
+        );
+    } else {
+        f.render_widget(app.gauge(pct, label), area);
+    }
+}
+
+/// Recolour a graph column by column in the flag's stripes, leaving the
+/// first `skip` columns (a label) alone.
+fn paint_columns(f: &mut Frame, app: &App, area: Rect, skip: u16) {
+    if app.flag.is_none() {
+        return;
+    }
+    let w = area.width.saturating_sub(skip);
+    for i in 0..w {
+        if let Some(c) = app.flag_at(i as usize, w as usize) {
+            for y in area.y..area.bottom() {
+                f.buffer_mut().get_mut(area.x + skip + i, y).set_fg(c);
+            }
+        }
+    }
 }
 
 fn draw_cpu(f: &mut Frame, app: &App, rect: Rect) {
@@ -515,7 +641,7 @@ fn draw_cpu(f: &mut Frame, app: &App, rect: Rect) {
         label.push_str(&format!("  {t:.0}{}", app.cs.degrees()));
     }
     let rows = vsplit(inner, &[1, 2, 1]);
-    f.render_widget(app.gauge(l.cpu_total, label), rows[0]);
+    draw_gauge(f, app, l.cpu_total, label, rows[0]);
     let data: Vec<u64> = l.cpu_history.iter().copied().collect();
     f.render_widget(
         Sparkline::default()
@@ -524,10 +650,12 @@ fn draw_cpu(f: &mut Frame, app: &App, rect: Rect) {
             .style(Style::default().fg(app.rc(app.theme.bar))),
         rows[1],
     );
+    paint_columns(f, app, rows[1], 0);
     f.render_widget(
         Paragraph::new(app.core_glyphs(inner.width as usize)),
         rows[2],
     );
+    paint_columns(f, app, rows[2], 6);
 }
 
 fn usage_label(name: &str, used: u64, total: u64) -> String {
@@ -550,14 +678,20 @@ fn draw_mem(f: &mut Frame, app: &App, rect: Rect) {
     }
     let areas = vsplit(inner, &rows);
     let p = percent(l.mem_used, l.mem_total);
-    f.render_widget(
-        app.gauge(p, usage_label("RAM", l.mem_used, l.mem_total)),
+    draw_gauge(
+        f,
+        app,
+        p,
+        usage_label("RAM", l.mem_used, l.mem_total),
         areas[0],
     );
     if l.swap_total > 0 {
         let p = percent(l.swap_used, l.swap_total);
-        f.render_widget(
-            app.gauge(p, usage_label("swap", l.swap_used, l.swap_total)),
+        draw_gauge(
+            f,
+            app,
+            p,
+            usage_label("swap", l.swap_used, l.swap_total),
             areas[1],
         );
     }
@@ -579,7 +713,7 @@ fn draw_disks(f: &mut Frame, app: &App, rect: Rect) {
             p,
             d.fs_type
         );
-        f.render_widget(app.gauge(p, label), area);
+        draw_gauge(f, app, p, label, area);
     }
 }
 
@@ -593,15 +727,17 @@ fn draw_net(f: &mut Frame, app: &App, rect: Rect) {
     } else {
         ("v", "^")
     };
+    let rx_col = app.flag_at(0, 2).unwrap_or(app.rc(app.theme.bar));
+    let tx_col = app.flag_at(1, 2).unwrap_or(app.rc(app.theme.key));
     let line = RLine::from(vec![
         RSpan::styled(
             format!("{down} {}", format_rate(l.rx_rate)),
-            Style::default().fg(app.rc(app.theme.bar)),
+            Style::default().fg(rx_col),
         ),
         RSpan::raw("   "),
         RSpan::styled(
             format!("{up} {}", format_rate(l.tx_rate)),
-            Style::default().fg(app.rc(app.theme.key)),
+            Style::default().fg(tx_col),
         ),
     ]);
     let rows = vsplit(inner, &[1, 1, 1]);
@@ -620,6 +756,8 @@ fn draw_net(f: &mut Frame, app: &App, rect: Rect) {
             .style(Style::default().fg(app.rc(app.theme.key))),
         rows[2],
     );
+    paint_columns(f, app, rows[1], 0);
+    paint_columns(f, app, rows[2], 0);
 }
 
 // ------------------------------------------------------------------- run
@@ -853,6 +991,47 @@ mod tests {
             assert!(out.contains(needle), "missing {needle:?} in:\n{out}");
         }
         assert!(out.contains('╭'), "rounded unicode borders");
+    }
+
+    #[test]
+    fn pride_flag_paints_the_panels() {
+        use ratatui::style::Color;
+        let paint = crate::flag::resolve(Some("trans")).unwrap();
+        let flagged = app(true).with_flag(paint);
+        let (w, h) = (110, 46);
+        let mut term = Terminal::new(TestBackend::new(w, h)).unwrap();
+        term.draw(|f| draw(f, &flagged)).unwrap();
+        let buf = term.backend().buffer().clone();
+        let text = render(&flagged, w, h);
+        let blue = Color::Rgb(91, 206, 250);
+        let pink = Color::Rgb(245, 169, 184);
+        let white = Color::Rgb(255, 255, 255);
+        let row_of = |needle: &str| text.iter().position(|l| l.contains(needle)).unwrap() as u16;
+        let cells = |y: u16| (0..w).map(move |x| (x, y));
+
+        // the RAM bar (25%) starts blue, runs through pink and white, and
+        // its label is still there
+        let ram = row_of("RAM 4.00 GiB");
+        let bgs: Vec<Color> = cells(ram).map(|(x, y)| buf.get(x, y).bg).collect();
+        for c in [blue, pink, white] {
+            assert!(bgs.contains(&c), "RAM bar missing {c:?}");
+        }
+        // panel titles are painted letter by letter
+        let sw = row_of("Software");
+        let fgs: Vec<Color> = cells(sw).map(|(x, y)| buf.get(x, y).fg).collect();
+        assert!(fgs.contains(&blue) && fgs.contains(&pink));
+        // CPU graph columns use the flag
+        let cores = row_of("cores");
+        let fgs: Vec<Color> = cells(cores).map(|(x, y)| buf.get(x, y).fg).collect();
+        assert!(fgs.contains(&blue) && fgs.contains(&white));
+
+        // without a flag nothing changes
+        let plain = app(true).with_flag(None);
+        assert_eq!(render(&plain, w, h), render(&app(true), w, h));
+        let mut term = Terminal::new(TestBackend::new(w, h)).unwrap();
+        term.draw(|f| draw(f, &plain)).unwrap();
+        let buf = term.backend().buffer().clone();
+        assert!(!(0..w).any(|x| buf.get(x, ram).bg == pink));
     }
 
     #[test]

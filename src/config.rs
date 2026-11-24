@@ -120,6 +120,9 @@ pub struct TuiConfig {
     pub effect: String,
     /// Samples kept for the CPU / network graphs.
     pub history: usize,
+    /// With a pride flag set, paint the panels (bars, graphs, titles,
+    /// arrows) in the flag too, not just the logo.
+    pub flag_panels: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -257,6 +260,7 @@ impl Default for TuiConfig {
             interval_ms: 1000,
             effect: "spin".into(),
             history: 60,
+            flag_panels: true,
         }
     }
 }

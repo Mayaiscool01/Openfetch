@@ -132,6 +132,9 @@ interval_ms = 1000
 # (an animated GIF logo always plays its own frames unless this is "none")
 effect = "spin"
 history = 60
+# With a pride flag (`--flag` or `[logo] flag`), paint the bars, graphs,
+# panel titles and arrows in the flag too. false = only the logo.
+flag_panels = true
 
 # Custom themes. Every colour is optional; missing ones come from `base`.
 # Colours: names (red, bright_blue, gray), #rrggbb, #rgb or 0-255.
