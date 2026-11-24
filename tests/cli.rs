@@ -1,5 +1,3 @@
-
-
 use std::path::PathBuf;
 use std::process::{Command, Output};
 
@@ -16,6 +14,19 @@ fn run(args: &[&str]) -> Output {
         .env_remove("XDG_CONFIG_HOME")
         .env_remove("NO_COLOR")
         .env("TERM", "xterm-256color")
+        .env("LANG", "en_US.UTF-8")
+        .output()
+        .expect("binary runs")
+}
+
+fn run_truecolor(args: &[&str]) -> Output {
+    Command::new(env!("CARGO_BIN_EXE_openfetch"))
+        .args(args)
+        .env("HOME", home())
+        .env_remove("XDG_CONFIG_HOME")
+        .env_remove("NO_COLOR")
+        .env("TERM", "xterm-256color")
+        .env("COLORTERM", "truecolor")
         .env("LANG", "en_US.UTF-8")
         .output()
         .expect("binary runs")
@@ -154,6 +165,64 @@ fn lists() {
 }
 
 #[test]
+fn pride_flags_paint_every_logo() {
+    let flags = stdout(&run(&["--list-flags"]));
+    for id in ["trans", "pride", "lesbian", "bi", "pan", "nonbinary"] {
+        assert!(flags.contains(id), "{flags}");
+    }
+    let cfg = write_config("flagcolor.toml", "[general]\ncolor = \"always\"\n");
+    for distro in ["fedora", "arch", "debian", "ubuntu", "opensuse", "linux"] {
+        // trans pink 245,169,184 and rainbow red 228,3,3 show up in truecolor
+        for (flag, rgb) in [("trans", "245;169;184"), ("lgbtq", "228;3;3")] {
+            let o = run_truecolor(&["--config", &cfg, "--logo", distro, "--flag", flag]);
+            assert!(o.status.success(), "{distro} {flag}");
+            assert!(stdout(&o).contains(rgb), "{distro} {flag}");
+        }
+    }
+    // the flag can come from the config, and --flag none turns it off
+    let cfg = write_config(
+        "flagcfg.toml",
+        "[general]\ncolor = \"always\"\n[logo]\nflag = \"trans\"\n",
+    );
+    assert!(stdout(&run_truecolor(&["--config", &cfg, "--logo", "arch"])).contains("91;206;250"));
+    let off = stdout(&run(&[
+        "--config", &cfg, "--logo", "arch", "--flag", "none",
+    ]));
+    assert!(!off.contains("91;206;250"));
+    // mixes: both flags show up
+    let cfg = write_config("flagmix.toml", "[general]\ncolor = \"always\"\n");
+    for distro in ["fedora", "arch", "ubuntu"] {
+        let out = stdout(&run_truecolor(&[
+            "--config",
+            &cfg,
+            "--logo",
+            distro,
+            "--flag",
+            "trans+lesbian",
+        ]));
+        assert!(
+            out.contains("91;206;250") && out.contains("163;2;98"),
+            "{distro}"
+        );
+        let out = stdout(&run_truecolor(&[
+            "--config",
+            &cfg,
+            "--logo",
+            distro,
+            "--flag",
+            "trans+gay",
+        ]));
+        assert!(
+            out.contains("91;206;250") && out.contains("115;41;130"),
+            "{distro}"
+        );
+    }
+    let bad = run(&["--logo", "arch", "--flag", "sparkly"]);
+    assert_eq!(bad.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&bad.stderr).contains("available:"));
+}
+
+#[test]
 fn ascii_flag_gives_pure_ascii() {
     let out = stdout(&run(&["--ascii"]));
     assert!(out.is_ascii(), "{out}");
@@ -220,7 +289,7 @@ fn init_config_writes_once() {
         run(&["--init-config", "--config", &arg]).status.code(),
         Some(1)
     );
-  
+
     assert!(run(&["--config", &arg, "--compact"]).status.success());
 }
 
@@ -256,7 +325,6 @@ fn narrow_terminals_hide_the_logo_and_truncate() {
 }
 
 fn png(name: &str) -> String {
-    
     const PNG: &[u8] = &[
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44,
         0x52, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02, 0x08, 0x02, 0x00, 0x00, 0x00, 0xfd,
@@ -277,7 +345,7 @@ fn image_can_be_used_as_the_logo() {
     let out = stdout(&o);
     assert!(out.contains('█'), "{out}");
     assert!(out.lines().count() >= 4);
-    
+
     let cfg = write_config(
         "image.toml",
         &format!("[logo]\nimage = \"{img}\"\nimage_width = 12\n"),
@@ -339,7 +407,7 @@ fn noip_hides_addresses_everywhere() {
     }
     let v: serde_json::Value = serde_json::from_slice(&run(&["--noip", "--json"]).stdout).unwrap();
     assert!(v["network"].is_null());
-  
+
     let cfg = write_config(
         "noip.toml",
         "[general]\nhide_ip = true\n[layout]\nframe = \"flat\"\n",

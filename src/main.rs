@@ -4,6 +4,7 @@ mod cli;
 mod config;
 mod cpu;
 mod desktop;
+mod flag;
 mod gpu;
 mod logo;
 mod memory;
@@ -87,6 +88,17 @@ fn run() -> Result<(), String> {
             .iter()
             .map(|b| format!("{:<10} {}\n", b.id, b.display))
             .collect();
+        return emit(&list);
+    }
+    if cli.list_flags {
+        let mut list = String::new();
+        for g in flag::Group::ALL {
+            list += &format!("{}:\n", g.title());
+            for f in flag::FLAGS.iter().filter(|f| f.group == g) {
+                list += &format!("  {:<12} {}\n", f.id, f.display);
+            }
+        }
+        list += "\nMix flags with +, e.g. --flag trans+lesbian or --flag trans+gay\n";
         return emit(&list);
     }
     if cli.init_config {
@@ -175,12 +187,25 @@ fn run() -> Result<(), String> {
         .clone()
         .or_else(|| theme.logo.clone())
         .unwrap_or_else(|| selected.palette.clone());
+    // a pride flag repaints the logo and replaces its palette
+    let flag = flag::resolve(cli.flag.as_deref().or(cfg.logo.flag.as_deref()))?;
+    let (flag_art, palette) = match &flag {
+        Some(f) => {
+            let (a, p) = selected.flag_art(compact, unicode, &cfg.logo.style, f);
+            (Some(a), p)
+        }
+        None => (None, palette),
+    };
     let max_rows = terminal_height()
         .unwrap_or(34)
         .saturating_sub(4)
         .clamp(6, 40);
     let image_path = cli.image.clone().or_else(|| cfg.logo.image.clone());
-    let text_art = || selected.art(compact, unicode, &cfg.logo.style, &palette);
+    let text_art = || {
+        flag_art
+            .clone()
+            .unwrap_or_else(|| selected.art(compact, unicode, &cfg.logo.style, &palette))
+    };
     let art = match image_path {
         Some(p) => {
             let path = config::expand_tilde(&p);

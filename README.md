@@ -57,6 +57,11 @@ battery inside a VM, are simply left out.)
   large and a small size. On Unicode terminals they are drawn as solid block
   art (two coloured pixels per cell); elsewhere as ASCII art. Derivatives pick the right logo through `ID_LIKE`
   (Manjaro, Mint, Rocky, ...). Custom logos with colour markers.
+- **Pride flags:** `--flag trans`, `nonbinary`, `genderfluid` (the trans
+  umbrella), `--flag pride` (or `lgbtq`), `lesbian`, `bi`, `pan`, `ace`, `aro` paint any distro's logo in
+  the flag's stripes; set `flag = "trans"` under `[logo]` to keep it. Mix up
+  to four with `+` (`--flag trans+lesbian`, `--flag trans+gay`): each flag
+  gets a diagonal slice of the logo.
 - **Live dashboard:** `openfetch --tui` is a full-screen view with live CPU
   (total, history graph, per-core), memory, swap, disk and network panels next
   to the logo and the same boxes. The logo spins by default.
@@ -152,12 +157,19 @@ openfetch --animation [FX]   animate the logo: rainbow | wave | pulse | spin | c
 openfetch --config [PATH]    PATH: use that config file; no value: show active config
 openfetch --init-config      write a documented default config
 openfetch --distro NAME      use another distro's logo in the normal output
+openfetch --flag FLAG        paint the logo in a pride flag (trans, pride, bi, ...)
+openfetch --flag A+B         mix flags, e.g. trans+lesbian, trans+gay
 openfetch --theme NAME       override the theme
 openfetch --noip             hide IP addresses (before sharing a screenshot)
 openfetch --ascii            ASCII only
 openfetch --no-color         no colours
-openfetch --list-themes | --list-logos
+openfetch --list-themes | --list-logos | --list-flags
 ```
+
+<p align="center">
+  <img src="assets/flags.png" alt="Every distro logo with the trans and rainbow flags" width="760">
+  <img src="assets/flags-mixed.png" alt="Mixed flags: trans+lesbian, trans+gay, trans+bi, trans+nonbinary" width="760">
+</p>
 
 Animations run in place below your prompt until you press a key (or for
 `animation.duration` seconds); the last frame stays in your scrollback. They

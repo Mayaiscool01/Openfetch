@@ -3,6 +3,7 @@
 
 use crate::bitmap::{Bitmap, TimedBitmap};
 use crate::config::{expand_tilde, LogoConfig};
+use crate::flag::{Bounds, Paint};
 use crate::os::OsRelease;
 use crate::output::{Line, Span};
 use crate::theme::ColorSpec;
@@ -827,6 +828,114 @@ impl Selected {
             Art::Cells(self.large.clone())
         }
     }
+
+    /// Like [`Selected::art`], but painted in the stripes of a pride flag
+    /// (or a mix of several). Returns the art and the palette to draw /
+    /// animate it with.
+    pub fn flag_art(
+        &self,
+        compact: bool,
+        unicode: bool,
+        style: &str,
+        paint: &Paint,
+    ) -> (Art, Vec<ColorSpec>) {
+        let palette = paint.palette();
+        let art = match self.art(compact, unicode, style, &palette) {
+            Art::Images(_) => {
+                let grid = if compact {
+                    &self.small_block
+                } else {
+                    &self.large_block
+                };
+                Art::Images(vec![(flag_bitmap(grid, paint), 0.1)])
+            }
+            Art::Cells(p) => Art::Cells(flag_cells(&p, paint)),
+        };
+        (art, palette)
+    }
+}
+
+/// Most used non-empty slot: the body of the logo. Other slots are details.
+fn main_slot(slots: impl Iterator<Item = u8>) -> u8 {
+    let mut count = [0usize; 256];
+    for s in slots.filter(|&s| s > 0) {
+        count[s as usize] += 1;
+    }
+    (1..=255u8).max_by_key(|&s| count[s as usize]).unwrap_or(1)
+}
+
+/// The area that contains anything.
+fn painted<T>(rows: &[Vec<T>], filled: impl Fn(&T) -> bool) -> Bounds {
+    let mut b: Option<Bounds> = None;
+    for (y, row) in rows.iter().enumerate() {
+        for (x, _) in row.iter().enumerate().filter(|(_, c)| filled(c)) {
+            b = Some(match b {
+                None => Bounds {
+                    x0: x,
+                    y0: y,
+                    x1: x,
+                    y1: y,
+                },
+                Some(b) => Bounds {
+                    x0: b.x0.min(x),
+                    y0: b.y0,
+                    x1: b.x1.max(x),
+                    y1: y,
+                },
+            });
+        }
+    }
+    b.unwrap_or(Bounds {
+        x0: 0,
+        y0: 0,
+        x1: 0,
+        y1: 0,
+    })
+}
+
+fn flag_bitmap(grid: &Grid, paint: &Paint) -> Bitmap {
+    let main = main_slot(grid.iter().flatten().copied());
+    let bounds = painted(grid, |&s| s > 0);
+    let w = grid.iter().map(Vec::len).max().unwrap_or(0);
+    let mut bm = Bitmap::new(w, grid.len() + grid.len() % 2);
+    for (y, row) in grid.iter().enumerate() {
+        for (x, &slot) in row.iter().enumerate() {
+            if slot > 0 {
+                let i = paint.index(x, y, bounds);
+                let i = if slot == main { i } else { i + paint.count() };
+                bm.set(x, y, Some(paint.rgb(i)));
+            }
+        }
+    }
+    bm
+}
+
+/// Re-slot ASCII art: slot `i + 1` = stripe colour `i` of the paint's
+/// palette, slot `count + i + 1` = its shade.
+fn flag_cells(p: &Parsed, paint: &Paint) -> Parsed {
+    // in text logos `$1` is the body by convention (and the default colour)
+    let main = 1;
+    let bounds = painted(&p.rows, |c| c.ch != ' ');
+    let n = paint.count();
+    let rows = p
+        .rows
+        .iter()
+        .enumerate()
+        .map(|(y, row)| {
+            row.iter()
+                .enumerate()
+                .map(|(x, c)| {
+                    let i = paint.index(x, y, bounds);
+                    let i = if c.slot == main { i } else { n + i };
+                    Cell {
+                        ch: c.ch,
+                        slot: (i + 1).min(255) as u8,
+                    }
+                })
+                .collect()
+        })
+        .collect();
+    Parsed { rows }
 }
 
 #[cfg(test)]
@@ -962,6 +1071,116 @@ mod tests {
         let used = colours(&art);
         assert!(used.contains(&pal[0]) && used.contains(&pal[1]));
         assert_eq!(colours(&art.mono()).len(), 1);
+    }
+
+    #[test]
+    fn every_distro_gets_every_flag() {
+        use std::collections::HashSet;
+        for b in BUILTINS {
+            let sel = select(&LogoConfig::default(), Some(b.id), None).unwrap();
+            for f in crate::flag::FLAGS {
+                let f = &crate::flag::Paint::single(f);
+                let flag = f.flags[0];
+                let stripes: HashSet<(u8, u8, u8)> = flag.stripes.iter().copied().collect();
+                let shades: HashSet<(u8, u8, u8)> = flag
+                    .stripes
+                    .iter()
+                    .map(|&c| crate::flag::shade(c))
+                    .collect();
+                // large block art: every stripe shows, nothing else but shades
+                let (art, pal) = sel.flag_art(false, true, "block", f);
+                let Art::Images(frames) = &art else {
+                    panic!("{} {}: expected block art", b.id, flag.id)
+                };
+                let used: HashSet<(u8, u8, u8)> =
+                    frames[0].0.px.iter().flatten().copied().collect();
+                assert!(stripes.is_subset(&used), "{} {}", b.id, flag.id);
+                assert!(used
+                    .iter()
+                    .all(|c| stripes.contains(c) || shades.contains(c)));
+                // ASCII art keeps its text and only uses flag colours
+                for compact in [false, true] {
+                    let (art, pal2) = sel.flag_art(compact, false, "ascii", f);
+                    assert_eq!(pal, pal2);
+                    let plain = sel.art(compact, false, "ascii", &pal);
+                    let text = |a: &Art| -> Vec<String> {
+                        a.lines(&pal)
+                            .iter()
+                            .map(|l| l.iter().map(|s| s.text.as_str()).collect())
+                            .collect()
+                    };
+                    assert_eq!(text(&art), text(&plain), "{} {}", b.id, flag.id);
+                    let colours = art
+                        .lines(&pal)
+                        .into_iter()
+                        .flatten()
+                        .filter_map(|s| s.color);
+                    for c in colours {
+                        assert!(pal.contains(&c), "{} {}", b.id, flag.id);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn trans_flag_runs_blue_pink_white_pink_blue() {
+        let f = crate::flag::find("trans").unwrap();
+        let sel = select(&LogoConfig::default(), Some("arch"), None).unwrap();
+        let (art, _) = sel.flag_art(false, true, "block", &crate::flag::Paint::single(f));
+        let Art::Images(frames) = art else { panic!() };
+        let bm = &frames[0].0;
+        let first_row = |pick: &dyn Fn(usize) -> usize| -> (u8, u8, u8) {
+            let y = pick(bm.h);
+            (0..bm.w).find_map(|x| bm.get(x, y)).unwrap()
+        };
+        assert_eq!(first_row(&|_| 0), f.stripes[0]);
+        assert_eq!(first_row(&|h| h / 2), f.stripes[2]);
+        assert_eq!(first_row(&|h| h - 1), f.stripes[4]);
+    }
+
+    #[test]
+    fn mixed_flags_show_both_flags_on_every_logo() {
+        use std::collections::HashSet;
+        for mix in [
+            "trans+lesbian",
+            "trans+gay",
+            "trans+bi",
+            "trans+pride+nonbinary",
+        ] {
+            let paint = crate::flag::resolve(Some(mix)).unwrap().unwrap();
+            for b in BUILTINS {
+                let sel = select(&LogoConfig::default(), Some(b.id), None).unwrap();
+                let (art, pal) = sel.flag_art(false, true, "block", &paint);
+                let Art::Images(frames) = &art else { panic!() };
+                let used: HashSet<(u8, u8, u8)> =
+                    frames[0].0.px.iter().flatten().copied().collect();
+                for f in &paint.flags {
+                    let mine = f
+                        .stripes
+                        .iter()
+                        .chain(
+                            f.stripes
+                                .iter()
+                                .map(|&c| crate::flag::shade(c))
+                                .collect::<Vec<_>>()
+                                .iter(),
+                        )
+                        .any(|c| used.contains(c));
+                    assert!(mine, "{mix} {}: {} missing", b.id, f.id);
+                }
+                // ASCII: same text, only palette colours
+                let (cells, _) = sel.flag_art(false, false, "ascii", &paint);
+                for c in cells
+                    .lines(&pal)
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|s| s.color)
+                {
+                    assert!(pal.contains(&c), "{mix} {}", b.id);
+                }
+            }
+        }
     }
 
     #[test]

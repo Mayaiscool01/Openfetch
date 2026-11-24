@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Pride flags: `--flag trans`, `nonbinary` and `genderfluid` (grouped as the
+  trans umbrella), `--flag pride` (alias `lgbtq`), plus lesbian, bi, pan, ace
+  and aro. Every distro logo (block and
+  ASCII, large and compact) and custom text logos are painted in the flag's
+  stripes; second-colour details keep their shape as a shade of the stripe.
+  Set `flag = "..."` under `[logo]` to make it stick; `--flag none` turns it
+  off for one run. `--list-flags` lists them.
+- Mixed flags: `--flag trans+lesbian`, `--flag trans+gay`, ... (up to four);
+  each flag paints a diagonal slice of the logo.
+
 ## 0.4.0
 
 - First public release.

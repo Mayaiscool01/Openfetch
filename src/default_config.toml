@@ -100,6 +100,13 @@ image_width = 36
 # lines = ["$1  /\\", "$1 /  \\", "$2/____\\"]
 # Palette used for the $1..$9 markers (overrides distro and theme colours).
 # colors = ["#ff5f6d", "#ffc371"]
+# Paint the logo in a pride flag (works with every distro logo and custom
+# text logos; not with --image pictures). `openfetch --list-flags` shows them:
+# trans, nonbinary, genderfluid (the trans umbrella), pride (lgbtq /
+# rainbow), lesbian, bi, pan, ace, aro. Mix up to 4 with + ("trans+lesbian", "trans+gay"): each flag
+# gets a diagonal slice of the logo. `openfetch --flag trans` does the same
+# for one run.
+# flag = "trans"
 
 [animation]
 # Animation is off by default. `openfetch --animation` turns it on for one run.

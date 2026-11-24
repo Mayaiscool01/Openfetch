@@ -38,6 +38,10 @@ pub struct Cli {
     #[arg(long, value_name = "NAME")]
     pub distro: Option<String>,
 
+    /// Paint the logo in a pride flag (trans, pride, lesbian, bi, ...; none = off)
+    #[arg(long, value_name = "FLAG")]
+    pub flag: Option<String>,
+
     /// Use a PNG, JPEG or GIF as the logo
     #[arg(long, value_name = "PATH")]
     pub image: Option<String>,
@@ -73,6 +77,10 @@ pub struct Cli {
     /// List the built-in logos and exit
     #[arg(long)]
     pub list_logos: bool,
+
+    /// List the pride flags for --flag and exit
+    #[arg(long)]
+    pub list_flags: bool,
 }
 
 impl Cli {
